@@ -489,11 +489,88 @@ namespace ui.core.tests {
         )
     }
 
+    /**
+     * Smoke harness for the build-time localization runtime.
+     */
+    export function runLocTest(): void {
+        // Identity path: no catalog means source strings pass through.
+        _loc.table = undefined
+        _loc.defaultFont = undefined
+        control.assert(loc("Hello") == "Hello", "loc identity no table")
+        control.assert(
+            locf("Hi {0}", ["Sam"]) == "Hi Sam",
+            "locf identity no table",
+        )
+        control.assert(locc("relay", "on") == "on", "locc identity no table")
+
+        // Table hit and fallback-on-miss.
+        _loc.table = {
+            Hello: "Bonjour",
+            "LED {0} {1}": "{1} {0} DEL",
+        }
+        control.assert(loc("Hello") == "Bonjour", "loc table hit")
+        control.assert(loc("Missing") == "Missing", "loc fallback on miss")
+
+        // locc: composite key, plain-string fallback, English fallback.
+        _loc.table = {
+            "relay#on": "MARCHE",
+            on: "activee",
+        }
+        control.assert(locc("relay", "on") == "MARCHE", "locc composite hit")
+        control.assert(
+            locc("switch", "on") == "activee",
+            "locc plain-string fallback",
+        )
+        control.assert(
+            locc("switch", "off") == "off",
+            "locc source fallback",
+        )
+
+        // locf: interpolation with reordered placeholders in translation.
+        _loc.table = {
+            "LED {0} {1}": "{1} {0} DEL",
+        }
+        control.assert(
+            locf("LED {0} {1}", ["red", "on"]) == "on red DEL",
+            "locf reordered interpolation",
+        )
+        control.assert(
+            locf("Plain {0}", ["x"]) == "Plain x",
+            "locf missing key interpolation",
+        )
+
+        // locFont: default font8 shape when unset, assigned font when set.
+        _loc.table = undefined
+        _loc.defaultFont = undefined
+        const fallbackFont = locFont()
+        control.assert(
+            fallbackFont.charWidth == bitmaps.font8.charWidth,
+            "locFont default char width",
+        )
+        control.assert(
+            fallbackFont.charHeight == bitmaps.font8.charHeight,
+            "locFont default char height",
+        )
+
+        const customFont: TextFont = {
+            charWidth: 3,
+            charHeight: 5,
+            data: hex``,
+        }
+        _loc.defaultFont = customFont
+        control.assert(locFont() == customFont, "locFont returns assigned font")
+
+        // Reset so ordering does not leak state to other tests.
+        _loc.table = undefined
+        _loc.defaultFont = undefined
+    }
+
     runGeometrySmokeTest()
     runViewportSmokeTest(2)
     runAssetResolverSmokeTest()
     runRuntimeSmokeTest()
     runLayoutSmokeTest()
+    runLocTest()
 
     control.__log(1, "All tests passed!")
 }
