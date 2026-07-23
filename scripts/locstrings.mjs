@@ -32,9 +32,11 @@ const STR = `"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'`
 // inside a literal do not truncate the capture.
 const ARG = `(?:${STR}|[^,)]*)`
 
-// A helper definition (`function loc(...)`) rather than a call site. Excluded
-// via lookbehind so parameter declarations are not read as call arguments.
-const DEF = `(?<!\\bfunction\\s{1,8})`
+// Guards for false call-site matches: a helper definition (`function
+// loc(...)`) is not a call, and a preceding identifier character or dot means
+// the name is a property access (obj.loc) or a longer identifier (myloc),
+// not the helper.
+const DEF = `(?<!\\bfunction\\s{1,8})(?<![$\\w.])`
 // loc(...) and locf(...): first argument. The optional "f" plus the required
 // "(" lookahead avoids matching locc and locFont.
 const LOC_RE = new RegExp(`${DEF}(?:ui\\.)?locf?\\s*\\(\\s*(${ARG})`, "g")
