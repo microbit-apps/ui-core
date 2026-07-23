@@ -1,7 +1,16 @@
 {
+    "name": "@microbit-apps/ui-core",
+    "type": "module",
+    "exports": {
+        "./loc": "./loc-tools/index.mjs"
+    },
+    "bin": {
+        "loc-strings": "./loc-tools/bin/loc-strings.mjs",
+        "loc-gen": "./loc-tools/bin/loc-gen.mjs"
+    },
     "scripts": {
         "format": "prettier --write \"**/*.ts\"",
-        "loc:strings": "node scripts/locstrings.mjs"
+        "loc:strings": "node loc-tools/bin/loc-strings.mjs"
     },
     "devDependencies": {
         "prettier": "^3.8.3"
