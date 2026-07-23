@@ -81,6 +81,14 @@ namespace ui {
         }
 
         /**
+         * Focus input controller owned by this screen.
+         */
+        public get focusInput(): UiFocusInputController {
+            return this.focusInput_
+        }
+
+
+        /**
          * Whether this screen currently owns an open modal.
          */
         public get hasModal(): boolean {
