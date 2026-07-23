@@ -1,8 +1,15 @@
 {
     "name": "ui-core",
     "version": "0.0.4",
+    "dependencies": {
+        "core": "*",
+        "radio": "*",
+        "microphone": "*",
+        "display-shield": "github:microbit-apps/display-shield#v1.1.4"
+    },
     "files": [
         "ns.ts",
+        "loc.ts",
         "geometry.ts",
         "viewport.ts",
         "draw-surface.ts",
@@ -19,23 +26,17 @@
         "modal.ts",
         "icons.ts"
     ],
-    "yotta": {
-        "config": {
-            "DEVICE_BLE": 0
-        }
-    },
-    "supportedTargets": [
-        "microbit"
-    ],
     "testFiles": [
         "test.ts",
         "samples.ts"
     ],
-    "dependencies": {
-        "core": "*",
-        "radio": "*",
-        "microphone": "*",
-        "display-shield": "github:microbit-apps/display-shield#v1.1.4"
-    },
-    "testDependencies": {}
+    "testDependencies": {},
+    "supportedTargets": [
+        "microbit"
+    ],
+    "yotta": {
+        "config": {
+            "DEVICE_BLE": 0
+        }
+    }
 }
