@@ -34,7 +34,9 @@ const options = {
     hexDir: config.hexDir ? join(root, config.hexDir) : undefined,
     hexName: config.hexName ? lang => config.hexName.replace("<lang>", lang) : undefined,
     reservedLangNames: config.reservedLangNames,
-    defaultLocG: config.defaultLocG || GENERIC_DEFAULT_LOC_G,
+    // The CLI always uses the stock default; a custom loc.g.ts default is an
+    // API-level concern (pass defaultLocG to runLocGen from a wrapper).
+    defaultLocG: GENERIC_DEFAULT_LOC_G,
     coverage,
     verbose,
     keep,

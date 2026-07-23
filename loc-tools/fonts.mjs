@@ -13,10 +13,17 @@ export function toHexCp(cp) {
     return "U+" + cp.toString(16).toUpperCase().padStart(4, "0")
 }
 
+// Escape regex metacharacters so a value can be matched literally.
+function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 // Parse the code-point coverage of a named font from a text source file.
 export function parseFontCoverage(srcPath, fontName) {
     const src = readFileSync(srcPath, "utf8")
-    const m = src.match(new RegExp(fontName + "[\\s\\S]*?data:\\s*hex`([\\s\\S]*?)`"))
+    const m = src.match(
+        new RegExp(escapeRegExp(fontName) + "[\\s\\S]*?data:\\s*hex`([\\s\\S]*?)`"),
+    )
     if (!m) throw new Error(`could not locate ${fontName} hex literal in ${srcPath}`)
     const hex = m[1].replace(/\s+/g, "")
     const set = new Set()

@@ -66,8 +66,10 @@ function resolveConfig(options) {
 // Languages present in the project's own locales/, excluding the source
 // language, the reserved charsets file, and any app-declared reserved names.
 function discoverLangs(cfg) {
+    const dir = join(cfg.root, "locales")
+    if (!existsSync(dir)) return []
     const langs = []
-    for (const f of readdirSync(join(cfg.root, "locales"))) {
+    for (const f of readdirSync(dir)) {
         if (!f.endsWith(".json")) continue
         const name = f.slice(0, -5)
         if (name === cfg.srcLang || name === "charsets") continue
