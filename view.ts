@@ -24,8 +24,14 @@ namespace ui {
     export interface UiFocusableView<TResult> extends UiView<TResult> {
         /**
          * Registers focus targets after layout has arranged this view.
+         *
+         * `scopeOptions` lets a parent view register this view's targets under a
+         * scope the parent owns.
          */
-        registerFocusTargets(focus: UiFocusState): void
+        registerFocusTargets(
+            focus: UiFocusState,
+            scopeOptions?: UiFocusScopeOptions,
+        ): void
 
         /**
          * Registers directional navigation after layout has arranged this view.
@@ -36,6 +42,40 @@ namespace ui {
          * Focuses the view's default target.
          */
         focusDefault(focus: UiFocusState): UiFocusSetResult
+    }
+
+    /**
+     * Focusable view that a parent view can compose into a scope the parent
+     * owns, so several views navigate as one.
+     *
+     * The parent assigns its scope with `setScopeId`, collects each child's
+     * targets with `navigationRows`, and registers one navigation for the whole
+     * group. Children keep rendering, measuring, and arranging themselves.
+     */
+    export interface UiComposableFocusView<TResult>
+        extends UiFocusableView<TResult> {
+        /**
+         * Focus scope this view registers its targets under.
+         */
+        scopeId: UiFocusScopeId
+
+        /**
+         * Adopts an owner scope. Target ids are rebuilt from the new scope, so
+         * this runs before any focus registration.
+         */
+        setScopeId(scopeId: UiFocusScopeId): void
+
+        /**
+         * Rows of navigation targets in movement order, using this view's
+         * current arranged rectangles and visibility.
+         */
+        navigationRows(): UiFocusNavigationTarget[][]
+
+        /**
+         * Target this view would focus by default, or `undefined` when it has
+         * no focusable target.
+         */
+        resolvePreferredTargetId(): UiFocusId | undefined
     }
 
     /**

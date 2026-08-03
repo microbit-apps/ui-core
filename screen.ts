@@ -424,13 +424,23 @@ namespace ui {
             return undefined
         }
 
+        /**
+         * Focuses the first root that can take focus. Roots whose targets are
+         * all hidden, and container views that own no scope, are skipped rather
+         * than swallowing the screen's initial focus.
+         */
         private focusFirstRoot(): UiFocusSetResult | undefined {
+            let firstResult: UiFocusSetResult | undefined = undefined
             for (let i = 0; i < this.roots_.length; i++) {
                 const view = this.roots_[i].view
-                if ((<any>view).registerFocusTargets)
-                    return (<any>view).focusDefault(this.focus_)
+                if (!(<any>view).registerFocusTargets) continue
+                const result = <UiFocusSetResult>(
+                    (<any>view).focusDefault(this.focus_)
+                )
+                if (result && result.kind == "focused") return result
+                if (!firstResult) firstResult = result
             }
-            return undefined
+            return firstResult
         }
 
         private defaultHandled<TResult>(result: TResult): boolean | undefined {
