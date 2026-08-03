@@ -582,13 +582,20 @@ namespace ui {
             return !!target && target.scopeId == scopeId && !target.hidden
         }
 
+        /**
+         * Drops a scope's retained target when that target is no longer
+         * eligible. When the scope is active, focus is re-resolved to the
+         * scope's preferred target so that hiding the focused control does not
+         * strand focus on something no movement can start from.
+         */
         private clearRetainedActiveTarget(
             scopeId: UiFocusScopeId,
             targetId: UiFocusId,
         ): void {
             const scope = this.findScope(scopeId)
-            if (scope && scope.activeTargetId == targetId)
-                scope.activeTargetId = undefined
+            if (!scope || scope.activeTargetId != targetId) return
+            scope.activeTargetId = undefined
+            if (this.activeScopeId_ == scopeId) this.activateScope(scope)
         }
 
         private activateScope(scope: UiFocusScopeRecord): UiFocusSetResult {
