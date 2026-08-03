@@ -269,9 +269,24 @@ namespace ui {
             return undefined
         }
 
+        /**
+         * Renders the root views, then their focus treatments, then the active
+         * modal. Focus treatments extend past their control, so drawing them in
+         * a pass of their own keeps a focus label from being covered by a root
+         * rendered after it. Views that do not separate the two render whole in
+         * the first pass.
+         */
         private renderViews(surface: DrawSurface): void {
             for (let i = 0; i < this.roots_.length; i++) {
-                this.roots_[i].view.render(surface, this.assets, this.focus_)
+                const view = <any>this.roots_[i].view
+                if (view.renderControls)
+                    view.renderControls(surface, this.assets, this.focus_)
+                else view.render(surface, this.assets, this.focus_)
+            }
+            for (let i = 0; i < this.roots_.length; i++) {
+                const view = <any>this.roots_[i].view
+                if (view.renderFocus)
+                    view.renderFocus(surface, this.assets, this.focus_)
             }
             if (this.activeModal_)
                 this.activeModal_.render(surface, this.assets, this.focus_)

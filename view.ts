@@ -72,6 +72,28 @@ namespace ui {
         navigationRows(): UiFocusNavigationTarget[][]
 
         /**
+         * Renders this view without its focus treatment.
+         *
+         * A focus treatment extends past the control it belongs to, so a parent
+         * draws every child's controls before any child's focus treatment.
+         * Otherwise a focus label is covered by whatever is rendered next.
+         */
+        renderControls(
+            surface: DrawSurface,
+            assets: UiAssetResolver,
+            focus?: UiFocusState,
+        ): void
+
+        /**
+         * Renders only this view's focus treatment.
+         */
+        renderFocus(
+            surface: DrawSurface,
+            assets: UiAssetResolver,
+            focus?: UiFocusState,
+        ): void
+
+        /**
          * Target this view would focus by default, or `undefined` when it has
          * no focusable target.
          */
