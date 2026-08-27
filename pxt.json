@@ -2,10 +2,12 @@
     "name": "ui-core",
     "version": "0.0.8",
     "dependencies": {
-        "core": "*",
-        "radio": "*",
-        "microphone": "*",
-        "display-shield": "github:microbit-apps/display-shield#v1.1.4"
+        "core": "file:../core",
+        "radio": "file:../radio",
+        "microphone": "file:../microphone",
+        "display-shield": "file:../display-shield-1.1.4",
+        "bitmap": "file:../bitmap",
+        "jacdac-bitmap": "file:../../../jacdac-docs/pxt-jacdac/bitmap"
     },
     "files": [
         "ns.ts",
@@ -15,6 +17,7 @@
         "draw-surface.ts",
         "bitmap-draw-surface.ts",
         "display-shield-frame-adapter.ts",
+        "jacdac-display-frame-adapter.ts",
         "runtime.ts",
         "input.ts",
         "screen.ts",

@@ -207,7 +207,14 @@ namespace ui {
             )
         }
 
-        private fillClippedRect(
+        /**
+         * Clips to the viewport and fills. `protected` so a subclass that
+         * mirrors to a second display can extend the one place every filled
+         * span passes through: `fillRect` and `drawRoundedRect` both route
+         * here, so an override catches their spans without reimplementing
+         * either shape.
+         */
+        protected fillClippedRect(
             x: number,
             y: number,
             width: number,
@@ -223,7 +230,11 @@ namespace ui {
             this.bitmap_.fillRect(x0, y0, x1 - x0, y1 - y0, color)
         }
 
-        private textFont(text: string, font?: TextFont): TextFont {
+        /**
+         * `protected` so a mirroring subclass resolves the same font this
+         * surface drew with, rather than resolving it a second way.
+         */
+        protected textFont(text: string, font?: TextFont): TextFont {
             if (font) return font
             return bitmaps.getFontForText(text)
         }
