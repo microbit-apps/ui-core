@@ -44,6 +44,11 @@ function resolveConfig(options) {
         srcLang,
         fonts,
         font: options.font || "font8",
+        // Per-language build-font override: a { lang: fontName } map or a
+        // lang => fontName function. Falls back to `font` for any language it
+        // does not name. The resolved font drives both glyph validation and
+        // the `_loc.defaultFont` assignment, so the two cannot disagree.
+        fontForLang: options.fontForLang || null,
         layers: discoverLayers(root),
         langs: options.langs || null,
         reservedLangNames: options.reservedLangNames || [],
@@ -85,6 +90,18 @@ function buildAndCopy(cfg, lang) {
     const dst = join(cfg.hexDir, cfg.hexName(lang))
     copyFileSync(join(cfg.root, "built", "binary.hex"), dst)
     return { dst, size: statSync(dst).size }
+}
+
+// The font `ui.locFont()` falls back to when `_loc.defaultFont` is unset. A
+// language rendering in this font needs no assignment emitted.
+const RUNTIME_FALLBACK_FONT = "font8"
+
+// Resolve the build font for one language.
+function resolveFont(cfg, lang) {
+    const f = cfg.fontForLang
+    if (!f) return cfg.font
+    const name = typeof f === "function" ? f(lang) : f[lang]
+    return name || cfg.font
 }
 
 // Validate a set of source strings rendered in the small-font context against
@@ -179,9 +196,15 @@ function processLanguage(cfg, lang) {
     // Glyph validation: drop entries whose translation contains code points the
     // build font cannot render. Code points below 33 are always acceptable.
     // Small-font-context keys are exempt: validated above.
-    const cov = cfg.fonts.coverage(cfg.font)
+    const font = resolveFont(cfg, lang)
+    const cov = cfg.fonts.coverage(font)
+    // An empty coverage set means the glyph table could not be read -- for
+    // example a placeholder whose real data ships in a .jres -- not a font
+    // with no glyphs. Validating against it would drop every translation.
+    if (cov.size === 0)
+        throw new Error(`font ${font}: no glyph coverage found; cannot validate ${lang}. Check that its glyph table is readable from the text source.`)
     const smallKeys = cfg.smallStrings || new Set()
-    const glyphDropped = dropUnrenderable(merged, smallKeys, cov, lang, cfg.font, false)
+    const glyphDropped = dropUnrenderable(merged, smallKeys, cov, lang, font, false)
 
     // Length warning (never drops): translated text much longer than source.
     let lengthWarnings = 0
@@ -221,7 +244,7 @@ function processLanguage(cfg, lang) {
         return report
     }
 
-    writeFileSync(cfg.locGPath, emitLocG(lang, merged, charsets))
+    writeFileSync(cfg.locGPath, emitLocG(lang, merged, charsets, font === RUNTIME_FALLBACK_FONT ? null : font))
     const built = buildAndCopy(cfg, lang)
 
     console.log(
