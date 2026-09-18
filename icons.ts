@@ -1,5 +1,7 @@
 namespace ui {
     // Shared icon bitmaps.
+    //% packable
+    //% whenUsed
     export const microbitLogo = bmp`
         ............................
         ......5555555555555555......
@@ -23,6 +25,8 @@ namespace ui {
     // SMALL ICONS:
     //-------------
 
+    //% packable
+    //% whenUsed
     export const microbit_logo_btn = bmp`
         . . . . . . . . . . . . . . . . 
         . . . . . . . . . . . . . . . . 
@@ -42,6 +46,8 @@ namespace ui {
         . . . . . . . . . . . . . . . .
     `
 
+    //% packable
+    //% whenUsed
     export const microbitLogoWhiteBackground = bmp`
         11111111111111111
         11115555555551111
@@ -61,6 +67,9 @@ namespace ui {
         11111444444441111
     `
 
+    // Not packable: an image pack falls back to this when a record cannot be
+    // read, so it has to stay a plain literal.
+    //% whenUsed
     export const MISSING = bmp`
         . . . . . . . . . . . . . . . .
         . . . . . . . . . . . . . . . .
@@ -80,6 +89,8 @@ namespace ui {
         . . . . . . . . . . . . . . . .
     `
 
+    //% packable
+    //% whenUsed
     export const green_tick = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
@@ -102,6 +113,8 @@ namespace ui {
     ///
     /// HARDWARE-SPECIFIC LANGUAGE TILES
     ///
+    //% packable
+    //% whenUsed
     export const tile_button_a = bmp`
         . . . . . . . . . . . . . . . .
         . . . . . . . . . . . . . . . .
@@ -121,6 +134,8 @@ namespace ui {
         . . . . . . . . . . . . . . . .
     `
 
+    //% packable
+    //% whenUsed
     export const tile_button_b = bmp`
         . . . . . . . . . . . . . . . .
         . . . . . . . . . . . . . . . .
@@ -140,12 +155,12 @@ namespace ui {
         . . . . . . . . . . . . . . . .
     `
 
-
     //------------------------
     // SENSORS AND ACTUATORS:
     //------------------------
 
-
+    //% packable
+    //% whenUsed
     export const pin_0 = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
@@ -165,6 +180,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const pin_1 = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
@@ -184,6 +201,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const pin_2 = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
@@ -203,6 +222,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const compass = bmp`
         1 1 1 1 5 5 5 5 5 5 5 1 1 1 1
         1 1 1 5 5 5 5 5 5 5 5 5 1 1 1
@@ -222,6 +243,8 @@ namespace ui {
         1 1 1 1 5 5 5 5 5 5 5 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const car_right_turn = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 c c c 1 1 1 1 1
@@ -241,6 +264,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const car_right_spin = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
@@ -260,6 +285,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1    
     `
 
+    //% packable
+    //% whenUsed
     export const finger_press = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 f 1 1 1 1 1 1 1 1
@@ -279,6 +306,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const magnet = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 6 1 1 1 
         1 1 1 1 1 1 1 1 1 1 6 1 1 1 6 1 
@@ -298,6 +327,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 6 1 1 1 1 1 
     `
 
+    //% packable
+    //% whenUsed
     export const thermometer = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 f 1 1 1 1 1 1 1 1
@@ -317,6 +348,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const led_light_sensor = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 8 8 8 8 5 5 5 8 8 8 8 1 1 1
@@ -336,6 +369,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const microphone = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
@@ -355,6 +390,8 @@ namespace ui {
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     `
 
+    //% packable
+    //% whenUsed
     export const accelerometer = bmp`
         1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         1 1 1 1 1 1 1 1 8 1 1 1 1 1 1 1
@@ -378,6 +415,8 @@ namespace ui {
     // Large Icons:
     //-------------
 
+    //% packable
+    //% whenUsed
     export const largeEditIcon = bmp`
         .666666666666666666666666666666.
         66666666666666666666666666666666
@@ -414,6 +453,8 @@ namespace ui {
         .bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.
     `
 
+    //% packable
+    //% whenUsed
     export const largeSettingsGear = bmp`
         66666666666666666666666666666666
         66666666666666666666666666666666
@@ -449,6 +490,8 @@ namespace ui {
         66666666666666666666666666666666
     `
 
+    //% packable
+    //% whenUsed
     export const linearGraph1 = bmp`
         .111111111111111111111111111111.
         11111111111111111111111111111111
@@ -485,6 +528,8 @@ namespace ui {
         .bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.
     `
 
+    //% packable
+    //% whenUsed
     export const radio_set_group = bmp`
         .666666666666666666666666666666.
         66666666666666666666666666666666
@@ -521,6 +566,8 @@ namespace ui {
         .666666666666666666666666666666.
     `
 
+    //% packable
+    //% whenUsed
     export const largeDisk = bmp`
         .666666666666666666666666666666.
         66666666666666666666666666666666

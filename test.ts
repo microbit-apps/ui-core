@@ -521,10 +521,7 @@ namespace ui.core.tests {
             locc("switch", "on") == "activee",
             "locc plain-string fallback",
         )
-        control.assert(
-            locc("switch", "off") == "off",
-            "locc source fallback",
-        )
+        control.assert(locc("switch", "off") == "off", "locc source fallback")
 
         // locf: interpolation with reordered placeholders in translation.
         _loc.table = {
@@ -565,12 +562,143 @@ namespace ui.core.tests {
         _loc.defaultFont = undefined
     }
 
+    /**
+     * Smoke harness for compressed image records (img.ts).
+     *
+     * Vectors come from img-tools encodeRecord, one per method: ui.MISSING
+     * compresses, and the checkerboard does not, so it stays uncompressed. No
+     * real icon measured so far fails to compress, so without a deliberately
+     * incompressible fixture the uncompressed path would ship untested.
+     */
+    export function runImgTest(): void {
+        const rleRecord = hex`87041000100001c00f0f0f02290521052105200020032000200520012001200120052002210220052002210220052001200120012005200020032000200521052105290f0f0f02`
+        const uncompressedRecord = hex`87041000100000001212121212121212212121212121212112121212121212122121212121212121121212121212121221212121212121211212121212121212212121212121212112121212121212122121212121212121121212121212121221212121212121211212121212121212212121212121212112121212121212122121212121212121`
+        const atOffset = hex`ffffff87041000100001c00f0f0f02290521052105200020032000200520012001200120052002210220052002210220052001200120012005200020032000200521052105290f0f0f02`
+        const badMarker = hex`87041000100000a00f0f0f02290521052105200020032000200520012001200120052002210220052002210220052001200120012005200020032000200521052105290f0f0f02`
+        const checker = bmp`
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+        `
+
+        samePixels(bitmaps.ofCompressed(rleRecord), ui.MISSING, "rle")
+        samePixels(bitmaps.ofCompressed(uncompressedRecord), checker, "uncompressed")
+        samePixels(
+            bitmaps.ofCompressed(atOffset, 3),
+            ui.MISSING,
+            "rle at offset",
+        )
+
+        // The zero-padding invariant is checked in img-tools, not here:
+        // nothing in the device API exposes a Bitmap's bytes.
+
+        // A buffer that is not a record is rejected rather than read as an
+        // enormous image; the caller gets null, as from ofBuffer.
+        control.assert(
+            bitmaps.ofCompressed(badMarker) === null,
+            "unknown method rejected",
+        )
+        control.assert(
+            bitmaps.ofCompressed(hex`00010203`) === null,
+            "non-record rejected",
+        )
+    }
+
+    function samePixels(actual: Bitmap, expected: Bitmap, what: string): void {
+        control.assert(!!actual, what + ": decoded")
+        control.assert(actual.width == expected.width, what + ": width")
+        control.assert(actual.height == expected.height, what + ": height")
+        let bad = 0
+        for (let x = 0; x < expected.width; ++x)
+            for (let y = 0; y < expected.height; ++y)
+                if (actual.getPixel(x, y) != expected.getPixel(x, y)) ++bad
+        control.assert(bad == 0, what + ": pixels")
+    }
+
+    /**
+     * Smoke harness for ui.ImagePack (img.ts).
+     *
+     * The fixture pack holds two records, with index 0 and index 2 sharing
+     * one offset, which is how the generator stores an image used twice.
+     */
+    export function runImagePackTest(): void {
+        const pack = new ui.ImagePack(
+            hex`87041000100001c00f0f0f02290521052105200020032000200520012001200120052002210220052002210220052001200120012005200020032000200521052105290f0f0f0287041000100000001212121212121212212121212121212112121212121212122121212121212121121212121212121221212121212121211212121212121212212121212121212112121212121212122121212121212121121212121212121221212121212121211212121212121212212121212121212112121212121212122121212121212121`,
+            hex`000047000000`,
+        )
+        const checker = bmp`
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+            2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1
+            1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+        `
+
+        samePixels(pack.get(0), ui.MISSING, "pack rle entry")
+        samePixels(pack.get(1), checker, "pack uncompressed entry")
+        control.assert(pack.length == 3, "pack length")
+
+        // Decoded once and kept: the same index hands back one object, and
+        // so do two indices that share a record.
+        control.assert(pack.get(0) === pack.get(0), "cached by index")
+        control.assert(
+            pack.get(0) === pack.get(2),
+            "shared record decoded once",
+        )
+
+        // Out of range yields the fallback rather than null.
+        control.assert(pack.get(99) === ui.MISSING, "out of range falls back")
+        control.assert(pack.get(-1) === ui.MISSING, "negative falls back")
+
+        // An unreadable record yields the fallback, not null.
+        const broken = new ui.ImagePack(
+            hex`87041000100000a00f0f0f02290521052105200020032000200520012001200120052002210220052002210220052001200120012005200020032000200521052105290f0f0f02`,
+            hex`0000`,
+        )
+        control.assert(broken.get(0) === ui.MISSING, "bad record falls back")
+
+        // A pack may carry its own fallback instead of ui.MISSING.
+        const custom = bmp`5`
+        const withFallback = new ui.ImagePack(
+            hex`87041000100000a00f0f0f02290521052105200020032000200520012001200120052002210220052002210220052001200120012005200020032000200521052105290f0f0f02`,
+            hex`0000`,
+            custom,
+        )
+        control.assert(withFallback.get(0) === custom, "custom fallback")
+    }
+
     runGeometrySmokeTest()
     runViewportSmokeTest(2)
     runAssetResolverSmokeTest()
     runRuntimeSmokeTest()
     runLayoutSmokeTest()
     runLocTest()
+    runImgTest()
+    runImagePackTest()
 
     control.__log(1, "All tests passed!")
 }

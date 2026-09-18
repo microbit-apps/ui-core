@@ -10,6 +10,7 @@
     "files": [
         "ns.ts",
         "loc.ts",
+        "img.ts",
         "geometry.ts",
         "viewport.ts",
         "draw-surface.ts",
