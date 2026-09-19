@@ -23,9 +23,15 @@ export const GENERIC_DEFAULT_LOC_G = `// Generated placeholder for a per-languag
 
 // Emit loc.g.ts content for one language. `table` is the id-to-string catalog
 // (emitted only when non-empty); `charsets` maps field names to their resolved
-// strings (each emitted as a `_loc` member assignment). Both live inside one
-// reopened `namespace _loc` block.
-export function emitLocG(lang, table, charsets) {
+// strings (each emitted as a `_loc` member assignment). `font`, when given, is
+// the name of a `bitmaps` font the language renders in, assigned to
+// `_loc.defaultFont` so `ui.locFont()` returns it instead of the built-in
+// fallback. All live inside one reopened `namespace _loc` block.
+//
+// The font is emitted as a reference (`bitmaps.font12`), not as glyph data:
+// the font is already in the image, and a second copy would cost flash and
+// could drift from the one the coverage check validated against.
+export function emitLocG(lang, table, charsets, font) {
     const keys = Object.keys(table).sort()
     const fields = Object.keys(charsets).sort()
     const lines = []
@@ -36,6 +42,7 @@ export function emitLocG(lang, table, charsets) {
     lines.push("// this file after the run. Do not commit this generated content.")
     lines.push("// lang: " + lang)
     lines.push("namespace _loc {")
+    if (font) lines.push("    defaultFont = bitmaps." + font)
     if (keys.length > 0) {
         const entries = keys.map(k => "        " + JSON.stringify(k) + ": " + JSON.stringify(table[k]))
         lines.push("    table = {")
