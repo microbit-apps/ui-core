@@ -16,6 +16,7 @@
         "test:img": "node --test \"img-tools/test/*.test.mjs\""
     },
     "devDependencies": {
-        "prettier": "^3.8.3"
+        "prettier": "^3.8.3",
+        "typescript": "^5.9.3"
     }
 }

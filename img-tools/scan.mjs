@@ -1,4 +1,4 @@
-// Source scanning for packable images.
+// Source scanning for packable images, over a TypeScript AST.
 //
 // A packable image is an `export const <name> = bmp` literal carrying a
 // `//% packable` attribute in the comment block directly above it. The image
@@ -10,84 +10,21 @@
 // key tables of the apps that use it. An app aliasing its own key to an image
 // belongs in its key table instead.
 //
-// Images inside a /* */ block are ignored, matching what the compiler sees.
-//
 // The same source is also read two other ways: for every `bmp` literal a file
 // declares, annotated or not, and for whether an image's const is referenced
 // by name anywhere, which decides whether packing it would move it or copy it.
+//
+// Parsing is TypeScript's, so comments, strings, namespaces and identifiers
+// are distinguished by the language rather than by pattern. Attributes are the
+// exception: they live inside comment text, and are read with a regex, as pxt
+// reads its own.
 
-// One `//%` attribute block followed by an exported bmp literal.
-const DECL =
-    /((?:[ \t]*\/\/%[^\n]*\n)+)[ \t]*export[ \t]+const[ \t]+(\w+)[ \t]*=[ \t]*bmp`([^`]*)`/g
+import ts from "typescript"
 
-// Any exported bmp literal, with or without attributes.
-const LITERAL = /export[ \t]+const[ \t]+(\w+)[ \t]*=[ \t]*bmp`([^`]*)`/g
+const parse = (src, file) =>
+    ts.createSourceFile(file || "source.ts", src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
 
-// The namespace a declaration sits in, for reports that name the const. Brace
-// tokens are matched too, so the scan can tell an open namespace from a closed
-// one.
-const NAMESPACE = /\bnamespace[ \t]+([\w.]+)|[{}]/g
-
-/**
- * Blanks out comments, keeping every newline so line numbers still match the
- * file on disk. A "/*" or "//" inside a string or template is left alone.
- *
- * `opts.lineComments` also blanks `//` comments, which discovery needs to keep
- * because `//%` attributes live in them. `opts.strings` blanks the text inside
- * quotes, which reference counting needs: a name in string data is not a use
- * of the const that shares it. Interpolations in a template are kept, since
- * those hold real code.
- */
-function blankComments(src, opts) {
-    const lineComments = !!(opts && opts.lineComments)
-    const strings = !!(opts && opts.strings)
-    let out = ""
-    let i = 0
-    const blank = text => {
-        for (const ch of text) out += ch === "\n" ? "\n" : " "
-    }
-    while (i < src.length) {
-        const c = src[i]
-        const d = src[i + 1]
-        if (c === "/" && d === "*") {
-            const end = src.indexOf("*/", i + 2)
-            const stop = end < 0 ? src.length : end + 2
-            blank(src.slice(i, stop))
-            i = stop
-        } else if (c === "/" && d === "/") {
-            const end = src.indexOf("\n", i)
-            const stop = end < 0 ? src.length : end
-            if (lineComments) blank(src.slice(i, stop))
-            else out += src.slice(i, stop)
-            i = stop
-        } else if (c === '"' || c === "'" || c === "`") {
-            let j = i + 1
-            while (j < src.length && src[j] !== c) j += src[j] === "\\" ? 2 : 1
-            const stop = Math.min(j + 1, src.length)
-            const body = src.slice(i + 1, stop - 1)
-            if (!strings) out += src.slice(i, stop)
-            else {
-                out += c
-                // Keep ${...} in a template: it is code, not text.
-                for (const part of body.split(/(\$\{[^}]*\})/g)) {
-                    if (c === "`" && part.startsWith("${")) out += part
-                    else blank(part)
-                }
-                out += stop - 1 > i ? c : ""
-            }
-            i = stop
-        } else {
-            out += c
-            i++
-        }
-    }
-    return out
-}
-
-/** Source with block comments blanked, leaving `//%` attributes readable. */
-export function stripBlockComments(src) {
-    return blankComments(src, {})
-}
+const lineOf = (sf, pos) => sf.getLineAndCharacterOfPosition(pos).line + 1
 
 /**
  * Reads `//% packable` from an attribute block: null when absent, otherwise
@@ -103,35 +40,60 @@ function packableAttr(attrs) {
     return (raw || "").trim()
 }
 
+/** The namespaces enclosing a node, outermost first, as `a.b.c`, or null. */
+function namespaceOf(node) {
+    const names = []
+    for (let n = node.parent; n; n = n.parent)
+        if (ts.isModuleDeclaration(n) && ts.isIdentifier(n.name)) names.unshift(n.name.text)
+    return names.length > 0 ? names.join(".") : null
+}
+
 /**
- * The namespaces enclosing `index`, outermost first, as `a.b.c`, or null at top
- * level. Depth is tracked so a namespace that has already closed is not
- * attributed to what follows it, and nesting gives the full name.
- *
- * `code` must have comments and strings blanked, so braces inside them do not
- * shift the depth.
+ * The comments directly above a statement, stopping at a blank line, so a
+ * distant comment is never read as this declaration's attributes.
  */
-function namespaceAt(code, index) {
-    const stack = []
-    let depth = 0
-    let pending = null
-    let m
-    NAMESPACE.lastIndex = 0
-    while ((m = NAMESPACE.exec(code)) && m.index < index) {
-        if (m[1]) {
-            pending = m[1]
-        } else if (m[0] === "{") {
-            depth++
-            if (pending) {
-                stack.push({ name: pending, depth })
-                pending = null
-            }
-        } else {
-            while (stack.length > 0 && stack[stack.length - 1].depth === depth) stack.pop()
-            depth--
-        }
+function attachedComments(src, sf, stmt) {
+    const ranges = ts.getLeadingCommentRanges(src, stmt.getFullStart()) || []
+    const attached = []
+    let nextStart = stmt.getStart(sf)
+    for (let i = ranges.length - 1; i >= 0; i--) {
+        const r = ranges[i]
+        if (src.slice(r.end, nextStart).split("\n").length > 2) break
+        attached.unshift(r)
+        nextStart = r.pos
     }
-    return stack.length > 0 ? stack.map(e => e.name).join(".") : null
+    return attached
+}
+
+/** Calls `fn` for every `export const <name> = bmp` literal in the file. */
+function eachImageConst(src, file, fn) {
+    const sf = parse(src, file)
+    const visit = node => {
+        if (
+            ts.isVariableDeclaration(node) &&
+            ts.isIdentifier(node.name) &&
+            node.initializer &&
+            ts.isTaggedTemplateExpression(node.initializer) &&
+            ts.isIdentifier(node.initializer.tag) &&
+            node.initializer.tag.text === "bmp" &&
+            ts.isNoSubstitutionTemplateLiteral(node.initializer.template)
+        ) {
+            const stmt = node.parent.parent
+            const exported =
+                ts.isVariableStatement(stmt) &&
+                (stmt.modifiers || []).some(m => m.kind === ts.SyntaxKind.ExportKeyword)
+            if (exported)
+                fn({
+                    sf,
+                    stmt,
+                    constName: node.name.text,
+                    rows: node.initializer.template.text,
+                    namespace: namespaceOf(node),
+                })
+        }
+        ts.forEachChild(node, visit)
+    }
+    visit(sf)
 }
 
 /**
@@ -141,27 +103,26 @@ function namespaceAt(code, index) {
  * as written.
  */
 export function scanSource(src, file) {
-    const clean = stripBlockComments(src)
-    // Namespaces are tracked over a code-only view, so a brace inside a comment
-    // or a string cannot shift the depth. Blanking preserves length, so indices
-    // from `clean` line up with it.
-    const code = blankComments(src, { lineComments: true, strings: true })
     const found = []
-    let m
-    DECL.lastIndex = 0
-    while ((m = DECL.exec(clean))) {
-        const declared = packableAttr(m[1])
-        if (declared === null) continue
+    eachImageConst(src, file, ({ sf, stmt, constName, rows, namespace }) => {
+        const comments = attachedComments(src, sf, stmt)
+        const attrs = comments.map(c => src.slice(c.pos, c.end)).join("\n")
+        const declared = packableAttr(attrs)
+        if (declared === null) return
+        // The attribute block is the trailing run of `//%` comments.
+        let first = comments.length
+        while (first > 0 && src.slice(comments[first - 1].pos, comments[first - 1].end).startsWith("//%"))
+            first--
         found.push({
-            name: declared || m[2],
-            constName: m[2],
-            namespace: namespaceAt(code, m.index),
-            rows: m[3],
-            whenUsed: /\/\/%[^\n]*\bwhenUsed\b/.test(m[1]),
+            name: declared || constName,
+            constName,
+            namespace,
+            rows,
+            whenUsed: /\/\/%[^\n]*\bwhenUsed\b/.test(attrs),
             file,
-            line: clean.slice(0, m.index).split("\n").length,
+            line: lineOf(sf, comments[first] ? comments[first].pos : stmt.getStart(sf)),
         })
-    }
+    })
     return found
 }
 
@@ -171,38 +132,69 @@ export function scanSource(src, file) {
  * that still ship as literals.
  */
 export function scanLiterals(src, file) {
-    const clean = stripBlockComments(src)
     const found = []
-    let m
-    LITERAL.lastIndex = 0
-    while ((m = LITERAL.exec(clean)))
-        found.push({
-            constName: m[1],
-            rows: m[2],
-            file,
-            line: clean.slice(0, m.index).split("\n").length,
-        })
+    eachImageConst(src, file, ({ sf, stmt, constName, rows }) => {
+        found.push({ constName, rows, file, line: lineOf(sf, stmt.getStart(sf)) })
+    })
+    return found
+}
+
+/** The dotted name a property access reads, or null when it is not a plain chain. */
+function qualifierOf(node) {
+    const parts = []
+    for (let n = node; ; n = n.expression) {
+        if (ts.isIdentifier(n)) return [n.text, ...parts].join(".")
+        if (!ts.isPropertyAccessExpression(n)) return null
+        parts.unshift(n.name.text)
+    }
+}
+
+/** True when the file opens `ns`, so a bare name in it could resolve there. */
+function opensNamespace(sf, ns) {
+    const wanted = ns.split(".")
+    let found = false
+    const visit = node => {
+        if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
+            const chain = []
+            for (let n = node; n; n = n.parent)
+                if (ts.isModuleDeclaration(n) && ts.isIdentifier(n.name)) chain.unshift(n.name.text)
+            if (wanted.every((p, i) => chain[i] === p)) found = true
+        }
+        ts.forEachChild(node, visit)
+    }
+    visit(sf)
     return found
 }
 
 /**
- * Counts references to a const named `name` declared in `namespace ns`,
- * ignoring comments and the text inside quotes.
+ * Counts references to a const named `name` declared in `namespace ns`.
  *
  * A reference is `ns.name` from anywhere, or a bare `name` in a file that opens
  * that namespace -- so `music.playTone()` is not a use of `icondb.music`. The
  * const's own declaration is one such bare use, which is why a caller compares
  * the total against 1 rather than 0. Pass no `ns` to count bare uses anywhere.
+ *
+ * Only identifiers count: a name in a comment, in string data, or as a member
+ * of some other object is not a use of this const.
  */
 export function countReferences(src, name, ns) {
-    const code = blankComments(src, { lineComments: true, strings: true })
-    const escaped = ns ? ns.replace(/\./g, "\\.") : null
+    const sf = parse(src, "source.ts")
+    const bareCounts = !ns || opensNamespace(sf, ns)
     let total = 0
-    if (ns) {
-        const qualified = code.match(new RegExp("\\b" + escaped + "\\." + name + "\\b", "g"))
-        total += qualified ? qualified.length : 0
-        if (!new RegExp("\\bnamespace\\s+" + escaped + "\\b").test(code)) return total
+    const visit = node => {
+        if (ts.isPropertyAccessExpression(node) && node.name.text === name) {
+            if (ns && qualifierOf(node.expression) === ns) total++
+        } else if (ts.isIdentifier(node) && node.text === name) {
+            const p = node.parent
+            const isMemberName =
+                (ts.isPropertyAccessExpression(p) && p.name === node) ||
+                (ts.isQualifiedName(p) && p.right === node) ||
+                (ts.isPropertyAssignment(p) && p.name === node) ||
+                (ts.isPropertySignature(p) && p.name === node)
+            if (!isMemberName && bareCounts) total++
+        }
+        ts.forEachChild(node, visit)
     }
-    const bare = code.match(new RegExp("(?<![.\\w])" + name + "\\b", "g"))
-    return total + (bare ? bare.length : 0)
+    visit(sf)
+    return total
 }
