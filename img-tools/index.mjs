@@ -12,7 +12,7 @@
 export { encodeImage, encodeRecord, decodeRecord, isUncompressed, recordLength } from "./codec.mjs"
 export { runImageGen } from "./gen.mjs"
 export { runImageCheck, imagesInBuild, findBuildOutputs } from "./verify.mjs"
-export { scanSource, scanLiterals, countReferences, stripBlockComments } from "./scan.mjs"
+export { scanSource, scanLiterals, countReferences } from "./scan.mjs"
 export { discoverPackages } from "./packages.mjs"
 export { readKeyTable, emptyKeyTable, referencedNames } from "./keys.mjs"
 export { buildPack } from "./pack.mjs"

@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
-import { scanSource, scanLiterals, countReferences, stripBlockComments } from "../scan.mjs"
+import { scanSource, scanLiterals, countReferences } from "../scan.mjs"
 import { BT, bmpConst, ns } from "./helpers.mjs"
 
 const names = src => scanSource(src, "a.ts").map(i => i.name)
@@ -50,9 +50,7 @@ test("a comment opener inside a string does not hide what follows", () => {
     assert.deepEqual(names(src), ["after"])
 })
 
-test("blanking comments keeps line numbers", () => {
-    const src = "a\n/* one\ntwo */\nb\n"
-    assert.equal(stripBlockComments(src).split("\n").length, src.split("\n").length)
+test("a block comment above a declaration does not shift its line", () => {
     const [img] = scanSource("/*\n\n*/\n" + ns("a", bmpConst("x", ["1"], ["packable"])), "a.ts")
     assert.equal(img.line, 5)
 })
