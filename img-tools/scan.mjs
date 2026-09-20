@@ -23,8 +23,10 @@ const DECL =
 // Any exported bmp literal, with or without attributes.
 const LITERAL = /export[ \t]+const[ \t]+(\w+)[ \t]*=[ \t]*bmp`([^`]*)`/g
 
-// The namespace a declaration sits in, for reports that name the const.
-const NAMESPACE = /\bnamespace[ \t]+([\w.]+)/g
+// The namespace a declaration sits in, for reports that name the const. Brace
+// tokens are matched too, so the scan can tell an open namespace from a closed
+// one.
+const NAMESPACE = /\bnamespace[ \t]+([\w.]+)|[{}]/g
 
 /**
  * Blanks out comments, keeping every newline so line numbers still match the
@@ -101,13 +103,35 @@ function packableAttr(attrs) {
     return (raw || "").trim()
 }
 
-/** The innermost namespace opened before `index`, or null. */
-function namespaceAt(src, index) {
-    let ns = null
+/**
+ * The namespaces enclosing `index`, outermost first, as `a.b.c`, or null at top
+ * level. Depth is tracked so a namespace that has already closed is not
+ * attributed to what follows it, and nesting gives the full name.
+ *
+ * `code` must have comments and strings blanked, so braces inside them do not
+ * shift the depth.
+ */
+function namespaceAt(code, index) {
+    const stack = []
+    let depth = 0
+    let pending = null
     let m
     NAMESPACE.lastIndex = 0
-    while ((m = NAMESPACE.exec(src)) && m.index < index) ns = m[1]
-    return ns
+    while ((m = NAMESPACE.exec(code)) && m.index < index) {
+        if (m[1]) {
+            pending = m[1]
+        } else if (m[0] === "{") {
+            depth++
+            if (pending) {
+                stack.push({ name: pending, depth })
+                pending = null
+            }
+        } else {
+            while (stack.length > 0 && stack[stack.length - 1].depth === depth) stack.pop()
+            depth--
+        }
+    }
+    return stack.length > 0 ? stack.map(e => e.name).join(".") : null
 }
 
 /**
@@ -118,6 +142,10 @@ function namespaceAt(src, index) {
  */
 export function scanSource(src, file) {
     const clean = stripBlockComments(src)
+    // Namespaces are tracked over a code-only view, so a brace inside a comment
+    // or a string cannot shift the depth. Blanking preserves length, so indices
+    // from `clean` line up with it.
+    const code = blankComments(src, { lineComments: true, strings: true })
     const found = []
     let m
     DECL.lastIndex = 0
@@ -127,7 +155,7 @@ export function scanSource(src, file) {
         found.push({
             name: declared || m[2],
             constName: m[2],
-            namespace: namespaceAt(clean, m.index),
+            namespace: namespaceAt(code, m.index),
             rows: m[3],
             whenUsed: /\/\/%[^\n]*\bwhenUsed\b/.test(m[1]),
             file,

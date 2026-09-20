@@ -57,6 +57,32 @@ test("blanking comments keeps line numbers", () => {
     assert.equal(img.line, 5)
 })
 
+test("a namespace that has closed is not attributed to what follows", () => {
+    const src = ns("first", bmpConst("inside", ["1"], ["packable"])) + "\n" + bmpConst("outside", ["2"], ["packable"])
+    assert.deepEqual(
+        scanSource(src, "a.ts").map(i => [i.constName, i.namespace]),
+        [["inside", "first"], ["outside", null]],
+    )
+})
+
+test("nested namespaces give the full name", () => {
+    const src = ns("outer", "    export " + ns("inner", bmpConst("nested", ["1"], ["packable"])).trim())
+    const [img] = scanSource(src, "a.ts")
+    assert.equal(img.namespace, "outer.inner")
+})
+
+test("braces inside comments and strings do not shift the namespace", () => {
+    const src = ns(
+        "only",
+        '    const a = "}"',
+        "    // }",
+        "    const b = " + BT + "}" + BT,
+        bmpConst("after", ["1"], ["packable"]),
+    )
+    const [img] = scanSource(src, "a.ts")
+    assert.equal(img.namespace, "only")
+})
+
 test("scanLiterals finds every bmp literal, annotated or not", () => {
     const src = ns("a", bmpConst("one", ["1"], ["packable"]), bmpConst("two", ["2"]))
     assert.deepEqual(scanLiterals(src, "a.ts").map(l => l.constName), ["one", "two"])
